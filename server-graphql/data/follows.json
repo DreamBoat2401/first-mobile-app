@@ -1,0 +1,20 @@
+[
+  {
+    "followingId": "6757c79da1aade29e5f29e85",
+    "followerId": "6757c79da1aade29e5f29e86",
+    "createdAt": "2024-03-19T08:00:00Z",
+    "updatedAt": "2024-03-19T08:00:00Z"
+  },
+  {
+    "followingId": "6757c79da1aade29e5f29e86",
+    "followerId": "6757c79da1aade29e5f29e85",
+    "createdAt": "2024-03-19T09:00:00Z",
+    "updatedAt": "2024-03-19T09:00:00Z"
+  },
+  {
+    "followingId": "6757c79da1aade29e5f29e87",
+    "followerId": "6757c79da1aade29e5f29e85",
+    "createdAt": "2024-03-19T09:00:00Z",
+    "updatedAt": "2024-03-19T09:00:00Z"
+  }
+]
