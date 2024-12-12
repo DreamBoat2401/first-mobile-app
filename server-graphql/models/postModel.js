@@ -4,8 +4,12 @@ import { UserModel } from "./userModel.js";
 
 export class PostModel {
   static async getCollection() {
-    const db = await getDb();
-    return db.collection("posts");
+    try {
+      const db = await getDb();
+      return db.collection("posts");
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   static async findAll() {
@@ -111,9 +115,9 @@ async function test() {
     // const posts = await PostModel.findAll();
     // console.log(posts);
     //!test find by id
-    const id = new ObjectId("6757c79da1aade29e5f29d90");
-    const post = await PostModel.findById(id);
-    console.log(post);
+    // const id = new ObjectId("6757c79da1aade29e5f29d90");
+    // const post = await PostModel.findById(id);
+    // console.log(post);
     //!test create
     // const post = {
     //   title: "post 1",
@@ -159,7 +163,4 @@ async function test() {
     process.exit(0);
   }
 }
-
-test();
-
-console.log("teesstttt");
+// test();

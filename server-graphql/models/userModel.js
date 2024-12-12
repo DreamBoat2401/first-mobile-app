@@ -12,11 +12,33 @@ export class UserModel {
     }
   }
 
-  static async findAll() {
+  static async findAll(search) {
     try {
       const collection = await this.getCollection();
-      const users = await collection.find().toArray();
+      let users = [];
+      if (search) {
+        users = await collection
+          .find({
+            $or: [
+              { name: { $regex: search, $options: "i" } },
+              { username: { $regex: search, $options: "i" } },
+            ],
+          })
+          .toArray();
+      } else {
+        users = await collection.find().toArray();
+      }
       return users;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  static async findByName(name) {
+    try {
+      const collection = await this.getCollection();
+      const user = await collection.findOne({ name });
+      return user;
     } catch (error) {
       console.log(error);
     }
@@ -93,17 +115,14 @@ async function test() {
     //test find all
     // const users = await UserModel.findAll();
     // console.log(users);
-
     //test find by id
     // const id = new ObjectId("6757c79da1aade29e5f29e85");
     // const user = await UserModel.findById(id);
     // console.log(user);
-
     //test find by email
     // const email = "user1@mail.com";
     // const user = await UserModel.findByEmail(email);
     // console.log(user);
-
     //test create
     // const user = {
     //   name: "user 7",
@@ -113,7 +132,6 @@ async function test() {
     // };
     // const result = await UserModel.create(user);
     // console.log(result);
-
     // test update
     // const id = new ObjectId("6757c79da1aade29e5f29e85");
     // const user = {
@@ -131,4 +149,4 @@ async function test() {
   }
 }
 
-test();
+// test();

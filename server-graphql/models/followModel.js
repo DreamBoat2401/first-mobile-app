@@ -3,8 +3,12 @@ import { ObjectId } from "mongodb";
 
 export class FollowModel {
   static async getCollection() {
-    const db = await getDb();
-    return db.collection("follows");
+    try {
+      const db = await getDb();
+      return db.collection("follows");
+    } catch (error) {
+      console.log(error);
+    }
   }
   static async findAll() {
     try {
@@ -91,18 +95,15 @@ async function test() {
     //test find all
     // const follows = await FollowModel.findAll();
     // console.log(follows);
-
     //test find by id
     // const id = new ObjectId("6757c79da1aade29e5f29e85");
     // const follow = await FollowModel.findById(id);
     // console.log(follow);
-
     //test is following
     // const followerId = new ObjectId("6757c79da1aade29e5f29e86");
     // const followingId = new ObjectId("6757c79da1aade29e5f29e85");
     // const isFollowing = await FollowModel.isFollowing(followerId, followingId);
     // console.log(isFollowing);
-
     //test followUser
     // const followerId = new ObjectId("6757c79da1aade29e5f29e87");
     // const followingId = new ObjectId("6757c79da1aade29e5f29e86");
@@ -112,26 +113,23 @@ async function test() {
     // };
     // const result = await FollowModel.create(follow);
     // console.log(result);
-
     //test unfollow
     // const followerId = new ObjectId("6757c79da1aade29e5f29e87");
     // const followingId = new ObjectId("6757c79da1aade29e5f29e86");
     // const result = await FollowModel.unfollowUser(followerId, followingId);
     // console.log(result);
-
     //test get followers
     // const followingId = new ObjectId("6757c79da1aade29e5f29e86");
     // const followers = await FollowModel.getFollowers(followingId);
     // console.log(followers);
-
     //test get following
-    const followerId = new ObjectId("6757c79da1aade29e5f29e87");
-    const following = await FollowModel.getFollowing(followerId);
-    console.log(following);
+    // const followerId = new ObjectId("6757c79da1aade29e5f29e87");
+    // const following = await FollowModel.getFollowing(followerId);
+    // console.log(following);
   } catch (error) {
     console.log(error);
   } finally {
     process.exit(0);
   }
 }
-test();
+// test();
