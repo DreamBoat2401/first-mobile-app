@@ -10,51 +10,57 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import * as SecureStore from "expo-secure-store";
+import { useQuery } from "@apollo/client";
+import { GET_PROFILE } from "../queries";
 
 const { width } = Dimensions.get("window");
 
-const videos = [
-  {
-    id: "1",
-    thumbnail: "https://via.placeholder.com/150",
-  },
-  {
-    id: "2",
-    thumbnail: "https://via.placeholder.com/150",
-  },
-  {
-    id: "3",
-    thumbnail: "https://via.placeholder.com/150",
-  },
-  {
-    id: "4",
-    thumbnail: "https://via.placeholder.com/150",
-  },
-  {
-    id: "5",
-    thumbnail: "https://via.placeholder.com/150",
-  },
-];
-
 export default function ProfilePage() {
-  const [isFollowing, setIsFollowing] = useState(false);
+  const navigation = useNavigation(); // Hook untuk navigasi
 
-  const handleFollow = () => setIsFollowing(!isFollowing);
+  const { loading, error, data } = useQuery(GET_PROFILE);
+  const handleLogout = async () => {
+    await SecureStore.deleteItemAsync("token");
+    navigation.navigate("LoginPage");
+  };
 
-  const renderVideoItem = ({ item }) => (
-    <TouchableOpacity style={styles.videoItem}>
-      <Image source={{ uri: item.thumbnail }} style={styles.videoThumbnail} />
-    </TouchableOpacity>
-  );
+  const renderProfileCard = () => {
+    return (
+      <>
+        <View style={styles.profileCard}>
+          <Text>Username: </Text>
+          <Text>{data.getProfile.username}</Text>
+        </View>
+        <View style={styles.profileCard}>
+          <Text>Name: </Text>
+          <Text>{data.getProfile.name}</Text>
+        </View>
+        <View style={styles.profileCard}>
+          <Text>Followers: </Text>
+          <Text>{data.getProfile.Followers?.length}</Text>
+        </View>
+        <View style={styles.profileCard}>
+          <Text>Following: </Text>
+          <Text>{data.getProfile.Followings?.length}</Text>
+        </View>
+      </>
+    );
+  };
+
+  if (loading) return;
+  <View style={styles}>
+    <Text>Loading ...</Text>
+  </View>;
+  if (error) console.log(error);
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Section */}
       <View style={styles.header}>
         <Ionicons name="arrow-back" size={28} color="black" />
       </View>
 
-      {/* Profile Section */}
       <View style={styles.profileSection}>
         <Image
           source={{
@@ -62,48 +68,38 @@ export default function ProfilePage() {
           }}
           style={styles.avatar}
         />
-        <Text style={styles.username}>Boediono Siregar</Text>
-        <Text style={styles.bio}>I Hate Code</Text>
+        <Text style={styles.username}>{data.getProfile.username}</Text>
+        <Text style={styles.name}>{data.getProfile.name}</Text>
 
-        {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>120</Text>
+            <Text style={styles.statNumber}>
+              {data.getProfile.Followings?.length}
+            </Text>
             <Text style={styles.statLabel}>Following</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>5.4K</Text>
+            <Text style={styles.statNumber}>
+              {data.getProfile.Followers?.length}
+            </Text>
             <Text style={styles.statLabel}>Followers</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>15.2K</Text>
+            <Text style={styles.statNumber}>
+              {data.getProfile.Likes?.length}
+            </Text>
             <Text style={styles.statLabel}>Likes</Text>
           </View>
         </View>
 
-        {/* Follow/Message Button */}
-        <TouchableOpacity
-          style={[
-            styles.followButton,
-            { backgroundColor: isFollowing ? "white" : "#F72C5B" },
-          ]}
-          onPress={handleFollow}
-        >
-          <Text
-            style={{
-              color: isFollowing ? "black" : "white",
-              fontWeight: "600",
-            }}
-          >
-            {isFollowing ? "Following" : "Follow"}
-          </Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Video Grid Section */}
       <FlatList
-        data={videos}
-        renderItem={renderVideoItem}
+        data={data.getProfile}
+        renderItem={renderProfileCard}
         keyExtractor={(item) => item.id}
         numColumns={3}
         style={styles.videoGrid}
@@ -114,20 +110,9 @@ export default function ProfilePage() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  profileSection: {
-    alignItems: "center",
-    padding: 16,
-  },
+  container: { flex: 1, backgroundColor: "white" },
+  header: { flexDirection: "row", alignItems: "center", padding: 16 },
+  profileSection: { alignItems: "center", padding: 16 },
   avatar: {
     width: 100,
     height: 100,
@@ -135,54 +120,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#e6e6e6",
   },
-  username: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 12,
-  },
-  bio: {
-    fontSize: 14,
-    color: "gray",
-    textAlign: "center",
-    marginTop: 8,
-  },
+  username: { fontSize: 18, fontWeight: "700", marginTop: 12 },
+  bio: { fontSize: 14, color: "gray", textAlign: "center", marginTop: 8 },
   statsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
     width: "100%",
     marginTop: 16,
   },
-  statItem: {
-    alignItems: "center",
-  },
-  statNumber: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "gray",
-  },
-  followButton: {
+  statItem: { alignItems: "center" },
+  statNumber: { fontSize: 16, fontWeight: "700" },
+  statLabel: { fontSize: 14, color: "gray" },
+  logoutButton: {
     marginTop: 16,
     paddingHorizontal: 40,
     paddingVertical: 10,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "black",
+    backgroundColor: "#f2f2f2",
   },
-  videoGrid: {
-    flex: 1,
-    marginHorizontal: 2,
-  },
-  videoItem: {
-    flex: 1,
-    margin: 2,
-    height: width / 3, // 1:1 aspect ratio
-  },
-  videoThumbnail: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 8,
-  },
+  logoutText: { color: "#333", fontWeight: "600" },
+  videoGrid: { flex: 1, marginHorizontal: 2 },
+  videoItem: { flex: 1, margin: 2, height: width / 3 },
+  videoThumbnail: { width: "100%", height: "100%", borderRadius: 8 },
 });

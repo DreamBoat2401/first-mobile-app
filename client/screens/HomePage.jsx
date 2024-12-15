@@ -1,3 +1,4 @@
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -5,129 +6,19 @@ import {
   Dimensions,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  TextInput,
+  Image,
 } from "react-native";
-import { Video } from "expo-av";
-import { useState, useRef } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { useKeepAwake } from "expo-keep-awake";
-import { ResizeMode } from "expo-av";
-import { useIsFocused } from "@react-navigation/native";
+import { FontAwesome, FontAwesome5 } from "@expo/vector-icons";
+import { useQuery } from "@apollo/client";
+import { GET_POSTS } from "../queries";
+import moment from "moment";
 
 const { width, height: screenHeight } = Dimensions.get("window");
-const TAB_BAR_HEIGHT = 49;
 
-// Data dummy untuk reels
-const reelsData = [
-  {
-    id: "1",
-    uri: "https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-576p.mp4",
-    caption: "Test Video 🎥",
-    likes: "105.2k",
-    comments: "2.3k",
-  },
-];
-
-export default function ExploreScreen() {
-  useKeepAwake();
+export default function HomePage() {
+  const { loading, error, data } = useQuery(GET_POSTS);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [likes, setLikes] = useState(Array(reelsData.length).fill(false)); // State for Like
-  const [isCommentVisible, setIsCommentVisible] = useState(false); // State for Comment Modal
-  const [newComment, setNewComment] = useState(""); // State for new comment input
-  const [comments, setComments] = useState({}); // State for comments per video
   const flatListRef = useRef(null);
-  const insets = useSafeAreaInsets();
-  const isFocused = useIsFocused();
-
-  const videoHeight = screenHeight - TAB_BAR_HEIGHT - insets.bottom;
-
-  const handleLike = (index) => {
-    const updatedLikes = [...likes];
-    updatedLikes[index] = !updatedLikes[index];
-    setLikes(updatedLikes);
-  };
-
-  const handleCommentPress = (index) => {
-    setActiveIndex(index);
-    setIsCommentVisible(true);
-  };
-
-  const handleAddComment = () => {
-    const updatedComments = { ...comments };
-    if (!updatedComments[activeIndex]) {
-      updatedComments[activeIndex] = [];
-    }
-    if (newComment.trim()) {
-      updatedComments[activeIndex].push(newComment);
-      setComments(updatedComments);
-      setNewComment("");
-    }
-  };
-
-  const renderItem = ({ item, index }) => {
-    return (
-      <View style={[styles.videoContainer, { height: videoHeight }]}>
-        <Video
-          source={{ uri: item.uri }}
-          style={styles.video}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay={index === activeIndex && isFocused}
-          isLooping
-          isMuted={false}
-          onError={(error) => {
-            console.log("Error loading video:", error);
-          }}
-          onLoadStart={() => {
-            console.log("Video mulai loading");
-          }}
-          onLoad={() => {
-            console.log("Video berhasil load");
-          }}
-        />
-
-        <View style={styles.overlay}>
-          <View style={styles.captionSection}>
-            <Text style={styles.caption}>{item.caption}</Text>
-          </View>
-
-          <View style={styles.actionsSection}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleLike(index)}
-            >
-              <Ionicons
-                name="heart"
-                size={28}
-                color={likes[index] ? "red" : "white"}
-              />
-              <Text style={styles.actionText}>
-                {likes[index]
-                  ? parseInt(item.likes.replace("k", "")) + 1
-                  : item.likes}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleCommentPress(index)}
-            >
-              <Ionicons name="chatbubble" size={26} color="white" />
-              <Text style={styles.actionText}>{item.comments}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="share-social" size={26} color="white" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  };
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems[0] != null) {
@@ -135,153 +26,149 @@ export default function ExploreScreen() {
     }
   }).current;
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    console.error(error);
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Error loading posts.</Text>
+      </View>
+    );
+  }
+
+  const posts = data?.getPosts || [];
+
+  const renderItem = ({ item }) => {
+    const { content, imgUrl, comments, likes, createdAt } = item;
+
+    return (
+      <View style={styles.postContainer}>
+        {imgUrl && (
+          <Image
+            source={{ uri: imgUrl }}
+            style={styles.postMedia}
+            resizeMode="cover"
+          />
+        )}
+
+        <View style={styles.overlay}>
+          {/* Post Details */}
+          <View style={styles.captionContainer}>
+            <Text style={styles.caption}>{content}</Text>
+            <Text style={styles.postedDate}>
+              Posted on {moment(createdAt).format("DD MMM 'YY")}
+            </Text>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => console.log("Like Pressed")}
+            >
+              <FontAwesome name="heart" size={24} color="white" />
+              <Text style={styles.actionText}>{likes?.length}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => console.log("Comment Pressed")}
+            >
+              <FontAwesome5 name="comment" size={22} color="white" />
+              <Text style={styles.actionText}>{comments?.length}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
-    <View style={styles.mainContainer}>
+    <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={reelsData}
+        data={posts}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         pagingEnabled
         showsVerticalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{
           itemVisiblePercentThreshold: 50,
         }}
-        snapToInterval={videoHeight}
+        snapToAlignment="start"
         decelerationRate="fast"
+        contentContainerStyle={{
+          paddingBottom: 80, // Tambahkan padding agar konten tidak tertutup tab bar
+        }}
       />
-
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <TouchableOpacity style={styles.searchButton}>
-          <Ionicons name="search" size={20} color="#fff" />
-        </TouchableOpacity>
-      </SafeAreaView>
-
-      {/* Comment */}
-      <Modal
-        visible={isCommentVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsCommentVisible(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: "black" }}>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                textAlign: "center",
-                fontSize: 18,
-                fontWeight: "600",
-                color: "white",
-                marginVertical: 16,
-              }}
-            >
-              Comments
-            </Text>
-            <View style={{ flex: 1, paddingHorizontal: 16 }}>
-              {comments[activeIndex]?.map((comment, idx) => (
-                <Text key={idx} style={{ color: "white", marginBottom: 10 }}>
-                  {comment}
-                </Text>
-              ))}
-            </View>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              borderTopWidth: 1,
-              borderTopColor: "#333",
-              padding: 8,
-            }}
-          >
-            <TextInput
-              value={newComment}
-              onChangeText={setNewComment}
-              placeholder="Add a comment..."
-              placeholderTextColor="#888"
-              style={{
-                flex: 1,
-                padding: 8,
-                backgroundColor: "#222",
-                color: "white",
-                borderRadius: 8,
-                marginRight: 8,
-              }}
-            />
-            <TouchableOpacity
-              onPress={handleAddComment}
-              style={{
-                backgroundColor: "#0a7ea4",
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ color: "white", fontWeight: "600" }}>Post</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
+  container: {
     flex: 1,
     backgroundColor: "black",
   },
-  safeArea: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 999,
-    backgroundColor: "transparent",
+  postContainer: {
+    width,
+    height: screenHeight,
+    position: "relative",
   },
-  searchButton: {
-    alignSelf: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.3)",
-    padding: 10,
-    borderRadius: 50,
-    marginTop: 10,
-    marginRight: 15,
-  },
-  videoContainer: {
-    width: width,
-  },
-  video: {
-    flex: 1,
+  postMedia: {
+    width: "100%",
+    height: "100%",
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 20,
+    position: "absolute",
+    bottom: 20,
+    left: 10,
+    right: 10,
   },
-  captionSection: {
-    flex: 1,
-    justifyContent: "flex-end",
-    paddingRight: 80,
-    marginBottom: 20,
-  },
-  actionsSection: {
-    justifyContent: "flex-end",
-    alignItems: "center",
-    gap: 15,
-    marginBottom: 20,
+  captionContainer: {
+    marginBottom: 15,
   },
   caption: {
     color: "white",
     fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  postedDate: {
+    color: "white",
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  actionButtons: {
+    position: "absolute",
+    right: 10,
+    bottom: 50,
+    alignItems: "center",
   },
   actionButton: {
+    marginBottom: 20,
     alignItems: "center",
-    gap: 5,
   },
   actionText: {
     color: "white",
-    fontSize: 14,
+    fontSize: 12,
+    marginTop: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "white",
+    fontSize: 18,
   },
 });
