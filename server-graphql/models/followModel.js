@@ -33,36 +33,33 @@ export class FollowModel {
     }
   }
 
-  static async followUser(follow) {
-    try {
-      const collection = await this.getCollection();
-      await collection.insertOne(follow);
+  static async followUser(follow, id) {
+    const collection = await this.getCollection();
 
-      if (follow.followingId === follow.followerId)
-        throw new Error("cannot follow yourself");
+    const { followingId } = follow;
+    const followerId = new ObjectId(id);
 
-      const existingFollow = await collection.findOne({
-        followingId: follow.followingId,
-        followerId: follow.followerId,
-      });
+    const input = {
+      followingId: new ObjectId(followingId),
+      followerId,
+    };
 
-      if (existingFollow) {
-        throw new Error("follow relationship already exists");
-      }
-      return { message: "follow created successfully" };
-    } catch (error) {
-      console.log(error);
+    const existingFollow = await collection.findOne(input);
+
+    if (existingFollow) {
+      await collection.deleteOne(input);
+      return { message: "unfollowed successfully" };
     }
-  }
 
-  static async unfollowUser(followerId, followingId) {
-    try {
-      const collection = await this.getCollection();
-      await collection.deleteOne({ followerId, followingId });
-      return { message: "follow deleted successfully" };
-    } catch (error) {
-      console.log(error);
-    }
+    const dataFollow = {
+      ...input,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await collection.insertOne(dataFollow);
+
+    return { message: "followed successfully" };
   }
 
   static async getFollowers(followingId) {

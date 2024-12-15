@@ -13,33 +13,94 @@ export class PostModel {
   }
 
   static async findAll() {
-    try {
-      const collection = await this.getCollection();
-      const posts = await collection.find().toArray();
-      return posts;
-    } catch (error) {
-      console.log(error);
-    }
+    const collection = await this.getCollection();
+    const posts = await collection
+      .aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "authorId",
+            foreignField: "_id",
+            as: "Author",
+          },
+        },
+        {
+          $project: {
+            "Author.password": 0,
+          },
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+        {
+          $unwind: {
+            path: "$Author",
+            preserveNullAndEmptyArrays: false,
+          },
+        },
+      ])
+      .toArray();
+
+    return posts;
   }
 
   static async findById(id) {
-    try {
-      const collection = await this.getCollection();
-      const post = await collection.findOne({ _id: new ObjectId(id) });
-      return post;
-    } catch (error) {
-      console.log(error);
-    }
+    const collection = await this.getCollection();
+    const post = await collection
+      .aggregate([
+        {
+          $match: {
+            _id: new ObjectId(id),
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "authorId",
+            foreignField: "_id",
+            as: "Author",
+          },
+        },
+        {
+          $project: {
+            "Author.password": 0,
+          },
+        },
+        {
+          $unwind: {
+            path: "$Author",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
+      .toArray();
+
+    if (!post[0] && post.length === 0) throw new Error("Post not found");
+    return post[0];
   }
 
   static async create(post) {
-    try {
-      const collection = await this.getCollection();
-      await collection.insertOne(post);
-      return { message: "post created successfully" };
-    } catch (error) {
-      console.log(error);
-    }
+    const collection = await this.getCollection();
+
+    if (!post.content) throw new Error("content is required");
+    if (!post.imgUrl) throw new Error("imgUrl is required");
+    if (!post.tags) throw new Error("tags is required");
+
+    console.log(post, "post");
+    await collection.insertOne({
+      content: post.content,
+      tags: post.tags || [],
+      imgUrl: post.imgUrl || null,
+      authorId: new ObjectId(post.authorId),
+      comments: [],
+      likes: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return { message: "post created successfully" };
   }
 
   static async update(id, post) {
@@ -53,58 +114,68 @@ export class PostModel {
   }
 
   static async delete(id) {
-    try {
-      const collection = await this.getCollection();
-      await collection.deleteOne({ _id: new ObjectId(id) });
-      return { message: "post deleted successfully" };
-    } catch (error) {
-      console.log(error);
-    }
+    const collection = await this.getCollection();
+    await collection.deleteOne({ _id: new ObjectId(id) });
+    return { message: "post deleted successfully" };
   }
 
-  static async comment(postId, comment) {
-    try {
-      const collection = await this.getCollection();
-      const post = await collection.findOne({ _id: new ObjectId(postId) });
-      post.comments.push({
-        ...comment,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      await collection.updateOne({ _id: new ObjectId(postId) }, { $set: post });
-      return { message: "comment added successfully" };
-    } catch (error) {
-      console.log(error);
-    }
-  }
-  static async like(postId, userId) {
-    try {
-      const collection = await this.getCollection();
-      const user = await UserModel.findById(userId);
-      console.log(user);
+  static async comment(payload, username) {
+    const collection = await this.getCollection();
 
+    const { postId, content } = payload;
+
+    const post = await collection.findOne({ _id: new ObjectId(postId) });
+
+    if (!post) throw new Error("Post not found");
+
+    await collection.updateOne(
+      { _id: new ObjectId(postId) },
+      {
+        $push: {
+          comments: {
+            content,
+            username,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      }
+    );
+
+    return { message: "Success add Comment" };
+  }
+
+  static async like(postId, username) {
+    const collection = await this.getCollection();
+
+    const post = await collection.findOne({
+      _id: new ObjectId(postId),
+      "likes.username": username,
+    });
+
+    if (post) {
       await collection.updateOne(
         { _id: new ObjectId(postId) },
-        { $addToSet: { likes: user } }
+        { $pull: { likes: { username } } }
       );
-      return { message: "like added successfully" };
-    } catch (error) {
-      console.log(error);
-    }
-  }
-  static async unlike(postId, userId) {
-    try {
-      const collection = await this.getCollection();
-      const user = await UserModel.findById(userId);
 
-      await collection.updateOne(
-        { _id: new ObjectId(postId) },
-        { $pull: { likes: user } }
-      );
       return { message: "like removed successfully" };
-    } catch (error) {
-      console.log(error);
     }
+
+    await collection.updateOne(
+      { _id: new ObjectId(postId) },
+      {
+        $push: {
+          likes: {
+            username,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      }
+    );
+
+    return { message: "Successfully liked the post" };
   }
 }
 
